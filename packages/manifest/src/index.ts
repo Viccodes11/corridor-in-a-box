@@ -153,7 +153,7 @@ export const FxSchema = z
   .object({
     /** The conversion path, in order. e.g. ["NGN","USDC","ARS"]. >= 2 hops. */
     path: z.array(z.string().min(1)).min(2),
-    quote_source: z.enum(["sep38", "external"]).default("sep38"),
+    quote_source: z.enum(["sep38", "native", "external"]).default("sep38"),
     /** Who carries the rate risk between quote-time and settlement. */
     who_holds_risk: z.enum(["sender", "sending_anchor", "receiving_anchor"]),
     /** Firm-quote TTL. The settle leg must hit the chain before this elapses. */
@@ -392,6 +392,19 @@ export function loadCorridor(path: string): ParseCorridorOutcome {
   return parseCorridor(raw);
 }
 
+/** Parse + validate a corridor manifest from raw YAML text. */
+export function parseCorridorYaml(text: string): ParseCorridorOutcome {
+  let raw: unknown;
+  try {
+    raw = parseYaml(text);
+  } catch (cause) {
+    return fail("MANIFEST_INVALID", "cannot parse corridor YAML", { cause });
+  }
+  return parseCorridor(raw);
+}
+
+export { parseYaml };
+
 function formatZodError(e: z.ZodError): string {
   return e.issues.map((i) => `${i.path.join(".") || "<root>"}: ${i.message}`).join("; ");
 }
@@ -434,3 +447,4 @@ export const manifestHash = hashCorridor;
 // checked. Both the CLI and the web dashboard read it, so neither can report a
 // corridor as healthy on its own authority.
 export { liveness, LIVENESS_LABEL, type Liveness, type LivenessState } from "./liveness";
+export { manifestFromProbe, type ManifestFromProbeOptions } from "./scaffold";
