@@ -133,6 +133,14 @@ export function renderSweepJson(results: readonly ProbeResult[]): string {
 }
 
 /**
+ * Escape text for a GFM table cell. Backslashes go first: a detail containing `\|`
+ * would otherwise turn our added escape into a literal backslash plus a live pipe.
+ */
+function escapeTableCell(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
+}
+
+/**
  * Format failed probes and their failure details into a human-readable table cell.
  */
 function formatFailedProbesDetail(result: ProbeResult): string {
@@ -144,7 +152,7 @@ function formatFailedProbesDetail(result: ProbeResult): string {
     return unpassed.length > 0 ? unpassed.join(", ") : "none";
   }
 
-  return failedOutcomes.map((o) => `${o.probe}: ${o.detail.replace(/\|/g, "\\|")}`).join("; ");
+  return failedOutcomes.map((o) => `${o.probe}: ${escapeTableCell(o.detail)}`).join("; ");
 }
 
 /**

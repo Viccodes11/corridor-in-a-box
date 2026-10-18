@@ -244,6 +244,20 @@ describe("pure report builders (@corridor/probe/report)", () => {
       expect(md).toContain("error: a \\| b \\| c");
     });
 
+    it("escapes backslashes first so an escaped pipe in the detail cannot reopen the cell", () => {
+      const withBackslash: ProbeResult = {
+        domain: "backslash.example.com",
+        seps: 0,
+        probesRun: probeBit("toml_fetch"),
+        probesPassed: 0,
+        tomlHash: "0".repeat(64),
+        outcomes: [{ probe: "toml_fetch", passed: false, detail: "path C:\\x \\| y" }],
+      };
+      const md = renderSweepMarkdown([withBackslash]);
+      // `\` -> `\\` and `|` -> `\|`, so the detail's own `\|` becomes `\\\|`.
+      expect(md).toContain("path C:\\\\x \\\\\\| y");
+    });
+
     it("buildSweepMarkdown aliases renderSweepMarkdown", () => {
       expect(buildSweepMarkdown(fixtures)).toBe(renderSweepMarkdown(fixtures));
     });
