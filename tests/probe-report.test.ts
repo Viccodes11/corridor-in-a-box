@@ -13,7 +13,10 @@ import {
   isUsableSep31,
   parseSweepArgs,
   probeBit,
+  isUsableSep31OffRamp,
+  parseProbeResults,
   renderSweepJson,
+  renderSweepReportJson,
   renderSweepMarkdown,
   sepBit,
   sweepAnchors,
@@ -113,10 +116,10 @@ describe("pure report builders (@corridor/probe/report)", () => {
     });
   });
 
-  describe("JSON rendering (sweep.json)", () => {
+  describe("decoded report rendering (sweep-report.json)", () => {
     it("renders valid JSON array of decoded results with receive assets and timestamp", () => {
       const fixedTimestamp = "2026-10-17T15:00:00.000Z";
-      const jsonStr = renderSweepJson(fixtures, { timestamp: fixedTimestamp });
+      const jsonStr = renderSweepReportJson(fixtures, { timestamp: fixedTimestamp });
 
       expect(() => JSON.parse(jsonStr)).not.toThrow();
       const parsed = JSON.parse(jsonStr) as SweepReportEntry[];
@@ -167,8 +170,25 @@ describe("pure report builders (@corridor/probe/report)", () => {
       });
     });
 
-    it("buildSweepJson aliases renderSweepJson", () => {
-      expect(buildSweepJson(fixtures)).toBe(renderSweepJson(fixtures));
+    it("buildSweepJson aliases renderSweepReportJson", () => {
+      expect(buildSweepJson(fixtures)).toBe(renderSweepReportJson(fixtures));
+    });
+
+    it("renderSweepJson keeps the exact ProbeResults so `attest --from` can load them", () => {
+      const parsed = JSON.parse(renderSweepJson(fixtures)) as ProbeResult[];
+      expect(parsed).toHaveLength(3);
+      // Bitmasks stay numeric: the decoded report is a separate file.
+      expect(parsed[0].seps).toBe(COWRIE_FIXTURE.seps);
+      expect(parsed[0].probesPassed).toBe(COWRIE_FIXTURE.probesPassed);
+      expect(parseProbeResults(renderSweepJson(fixtures)).map((r) => r.domain)).toEqual(
+        fixtures.map((r) => r.domain),
+      );
+    });
+
+    it("isUsableSep31OffRamp is the same predicate as isUsableSep31", () => {
+      for (const f of fixtures) {
+        expect(isUsableSep31OffRamp(f)).toBe(isUsableSep31(f));
+      }
     });
 
     it("builds sweep report entries with buildSweepReport and buildSweepReportEntry", () => {
@@ -298,7 +318,7 @@ describe("pure report builders (@corridor/probe/report)", () => {
   });
 
   describe("CLI execution (sweep:anchors --out)", () => {
-    it("pnpm sweep:anchors --out produces both sweep.json and sweep.md", () => {
+    it("pnpm sweep:anchors --out produces sweep.json, sweep.md and sweep-report.json", () => {
       const tempDir = mkdtempSync(join(tmpdir(), "sweep-test-"));
       try {
         const res = spawnSync(
@@ -323,6 +343,16 @@ describe("pure report builders (@corridor/probe/report)", () => {
         expect(Array.isArray(jsonContent)).toBe(true);
         expect(jsonContent.length).toBeGreaterThanOrEqual(1);
         expect(jsonContent[0].domain).toBe("testanchor.stellar.org");
+        // sweep.json is the attestable one: numeric bitmasks, loadable by `attest --from`.
+        expect(typeof jsonContent[0].seps).toBe("number");
+        expect(parseProbeResults(readFileSync(jsonFile, "utf8"))).toHaveLength(
+          jsonContent.length,
+        );
+
+        const reportFile = join(tempDir, "sweep-report.json");
+        expect(existsSync(reportFile)).toBe(true);
+        const report = JSON.parse(readFileSync(reportFile, "utf8"));
+        expect(Array.isArray(report[0].seps)).toBe(true);
 
         const mdContent = readFileSync(mdFile, "utf8");
         expect(mdContent).toContain("# Anchor Sweep Report");

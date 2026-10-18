@@ -43,6 +43,9 @@ export function isUsableSep31(result: ProbeResult): boolean {
   return advertisesSep31 && passedSep31Probe;
 }
 
+/** Alias kept for callers that used the earlier name. */
+export const isUsableSep31OffRamp = (result: ProbeResult): boolean => isUsableSep31(result);
+
 /**
  * Extract received assets accepted by the anchor from the probe result.
  */
@@ -106,17 +109,28 @@ export function buildSweepReport(
 }
 
 /**
- * Render an array of ProbeResults into a formatted JSON string (sweep.json).
+ * Render the decoded report (`sweep-report.json`): SEPs and probes by name, receive
+ * assets and a timestamp, with the raw bitmasks kept under `raw`. Meant for people and
+ * dashboards. It is NOT what gets attested, see {@link renderSweepJson}.
  */
-export function renderSweepJson(
+export function renderSweepReportJson(
   results: readonly ProbeResult[],
   options: SweepReportOptions = {},
 ): string {
   const report = buildSweepReport(results, options);
-  return JSON.stringify(report, null, 2);
+  return JSON.stringify(report, null, 2) + "\n";
 }
 
-export const buildSweepJson = renderSweepJson;
+export const buildSweepJson = renderSweepReportJson;
+
+/**
+ * Render the exact probe results (`sweep.json`). `pnpm attest --from sweep.json` reads
+ * this file, so the attested bytes are the observed bytes: the bitmasks stay numeric
+ * and nothing is re-derived from the decoded report.
+ */
+export function renderSweepJson(results: readonly ProbeResult[]): string {
+  return JSON.stringify(results, null, 2) + "\n";
+}
 
 /**
  * Format failed probes and their failure details into a human-readable table cell.
