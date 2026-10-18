@@ -171,7 +171,8 @@ describe("pure report builders (@corridor/probe/report)", () => {
     });
 
     it("buildSweepJson aliases renderSweepReportJson", () => {
-      expect(buildSweepJson(fixtures)).toBe(renderSweepReportJson(fixtures));
+      const options = { timestamp: "2026-10-17T15:00:00.000Z" };
+      expect(buildSweepJson(fixtures, options)).toBe(renderSweepReportJson(fixtures, options));
     });
 
     it("renderSweepJson keeps the exact ProbeResults so `attest --from` can load them", () => {
@@ -259,7 +260,10 @@ describe("pure report builders (@corridor/probe/report)", () => {
     });
 
     it("buildSweepMarkdown aliases renderSweepMarkdown", () => {
-      expect(buildSweepMarkdown(fixtures)).toBe(renderSweepMarkdown(fixtures));
+      const options = { timestamp: "2026-10-17T15:00:00.000Z" };
+      expect(buildSweepMarkdown(fixtures, options)).toBe(
+        renderSweepMarkdown(fixtures, options),
+      );
     });
   });
 
